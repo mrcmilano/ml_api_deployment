@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Language Detection LAN Tester</title>
+</head>
+<body>
+  <h2>Language Detection LAN Tester</h2>
+
+  <label for="textInput">Inserisci testo:</label><br>
+  <input type="text" id="textInput" size="50" value="Ciao come state tutti?"><br><br>
+  <button id="sendBtn">Invia al modello</button>
+
+  <h3>Risultato:</h3>
+  <pre id="result"></pre>
+
+  <script>
+    const apiUrl = "http://192.168.1.10:8000/language_detection";
+
+    document.getElementById("sendBtn").onclick = async () => {
+      const text = document.getElementById("textInput").value.trim();
+      if (!text) {
+        document.getElementById("result").textContent = "Inserisci un testo!";
+        return;
+      }
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texts: [text] })
+        });
+        const data = await response.json();
+        document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("result").textContent = "Errore: " + err;
+      }
+    };
+  </script>
+</body>
+</html>
