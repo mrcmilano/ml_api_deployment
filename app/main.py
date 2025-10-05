@@ -11,6 +11,7 @@ import threading
 # -------------------------------
 # Logging setup
 # -------------------------------
+# TODO: aggiungere logging su file con rotazione
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
