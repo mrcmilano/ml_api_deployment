@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from typing import List
 import joblib
 import os
-from app.utils import predict_language_safe, clean_texts
+# clean_texts usata da predict_language_safe nella pipeline
+from app.utils import predict_language_safe, clean_texts 
 import threading
 
 # -------------------------------
@@ -81,7 +82,7 @@ def detect_language(request: TextsRequest):
 
     with model_lock:
         predictions = predict_language_safe(model, le, texts, threshold=CONFIDENCE_THRESHOLD)
-        logger.info(f"Predictions made: version={MODEL_VERSION}, n_texts={len(texts)}")
+        logger.info(f"Predictions made: model_version={MODEL_VERSION}, n_texts={len(texts)}")
     
     return {"predictions": predictions, "model_version": MODEL_VERSION}
 
