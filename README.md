@@ -1,20 +1,21 @@
 # 🌍 ML Model Deployment App
 
-## 📝 Descrizione 
+## 📝 Descrizione
 
-Questa app espone una semplice API REST basata su **FastAPI** per il riconoscimento automatico della lingua di un testo. Nato come toy project per l'implementazione di best practice in ambito deployment di modelli ML.
+Questa app espone una semplice API REST basata su **FastAPI** per il riconoscimento automatico della lingua di un testo. Nato come education project per l'implementazione di best practice in ambito deployment di modelli ML.
 Il modello di classificazione è allenato su 4 lingue: **inglese, francese, italiano e spagnolo** utilizzando **Multinomial Naive Bayes** e pipeline di preprocessing con **TF-IDF**.
 
 Il progetto include:
-- Script per training pipeline del modello di riconoscimento della lingua (con GridSearchCV per ottimizzare MultinomialNB) con pipeline di scikit-learn. 
-- Semplice API REST per per esposizione endpoint di predizione via FastAPI, pronta per essere deployata con Docker
-- Endpoint di health check dell'API e per ottenere la versione del modello
+- Script per training del modello di riconoscimento della lingua (con GridSearchCV per ottimizzare MultinomialNB) con pipeline di scikit-learn.
+- Semplice API REST per per esposizione endpoint di predizione
+- Endpoint di health check dell'API e endpoint per ottenere la versione del modello
+- Deployment con Docker
 
-⚠️ __WARNING__ : This is a WIP
+⚠️ **WARNING** : This is a WIP
 
 ---
 
-## 🚀 Funzionalità 
+## 🚀 Funzionalità
 
 - Allenamento e salvataggio modello di classificazione
 - Endpoint `/language_detection` per la predizione della lingua di uno o più testi  
@@ -23,21 +24,20 @@ Il progetto include:
 - Deploy containerizzato con **Docker** per un avvio rapido e portabile  
 - Logging centralizzato per monitorare richieste e performance  
 
-
 ---
 
 ## ⚙️ Installazione e avvio locale
 
 #### 1️⃣ Clona il repository
 
-```
+```bash
 git clone https://github.com/mrcmilano/ml_api_deployment.git
 cd ml_api_deployment
 ```
 
 #### 2️⃣ Crea ed attiva un ambiente virtuale
 
-```
+```bash
 python -m venv venv
 source venv/bin/activate  # su macOS/Linux
 venv\Scripts\activate     # su Windows
@@ -45,19 +45,19 @@ venv\Scripts\activate     # su Windows
 
 #### 3️⃣ Installa le dipendenze
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
 #### 4️⃣ Allena modello basato su MultinomialNB
 
-```
+```bash
 python src/model_training.py
 ```
 
 #### 5️⃣ Avvia API in locale
 
-```
+```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -65,13 +65,13 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 #### Build dell'immagine
 
-```
+```bash
 docker build -t language-api .
 ```
 
 #### Avvio del container
 
-```
+```bash
 docker run -d -p 8000:8000 language-api
 ```
 
@@ -83,11 +83,13 @@ docker run -d -p 8000:8000 language-api
 | `/language_detection` | POST   | Rileva la lingua di uno o più testi |
 | `/model_version`      | GET    | Restituisce la versione del modello |
 
-### Esempio richiesta API 
+### Esempio richiesta API
+
 #### POST /language_detection
+
 ##### Richiesta
 
-```
+```bash
 curl -X POST "http://127.0.0.1:8000/language_detection" \
     -H "Content-Type: application/json" \
     -d '{"texts": ["Bonjour à tous!", "Ciao come va?", "Hello world!"]}'
@@ -96,9 +98,10 @@ curl -X POST "http://127.0.0.1:8000/language_detection" \
 ## ✅ Test
 
 Per eseguire unit tests:
-```
+
+```bash
 pytest -v
 ```
 
 ---
-☑️ __DISCLAIMER__ : Vibe-coded with ChatGPT - v5 and v4.1
+☑️ **DISCLAIMER** : Vibe-coded with ChatGPT - v5 and v4.1

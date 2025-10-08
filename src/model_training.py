@@ -1,100 +1,75 @@
-# ===============================
-# Multi-class Language Classification
-# ===============================
-import pprint
 import pandas as pd
-from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import FunctionTransformer
+from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import classification_report, confusion_matrix
-import seaborn as sns
-import matplotlib.pyplot as plt
+from sklearn.metrics import get_scorer
+# from app.utils import clean_texts  # funzione di pulizia testo sta qui per essere caricata in produzione
+from src.model_utils import load_config, clean_texts, save_pipeline_obj, log_experiment
+from sklearn.preprocessing import FunctionTransformer
+import numpy as np
+import os
 
-# -------------------------------
-# Caricamento dati
-# -------------------------------
-# Devo esistere le colonne 'text' e 'language'
-# TODO: aggiungere sanity check sul dataset per verificare che le colonne esistano
-df = pd.read_csv('../data/lang_detection.csv')
-df.columns = [x.lower() for x in df.columns]
+def main(config_path: str):
+    # Carica configurazione
+    cfg = load_config(config_path)
+    print(f"Loaded configuration: {config_path}")
 
-# -------------------------------
-# Label Encoding della variabile target
-# -------------------------------
-le = LabelEncoder()
-y = le.fit_transform(df["language"])  # trasforma le lingue in numeri interi
+    # Carica e prepara dataset di allenamento
+    print(f"Loading dataset from {cfg['dataset']['path']}")
+    df = pd.read_csv(cfg["dataset"]["path"])
+    X = df[cfg["dataset"]["text_column"]]
+    y = df[cfg["dataset"]["label_column"]]
 
-# -------------------------------
-# Funzione di pulizia testo (vectorized) + standardizzazione UTF-8
-# -------------------------------
-def clean_texts(texts):
-    return (
-        pd.Series(texts)
-        .astype(str)
-        .map(lambda x: x.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore"))
-        .str.lower()
-        .str.replace(r"[^\w\s]", "", regex=True)
-        .str.replace(r"\s+", " ", regex=True)
-        .str.strip()
-        .tolist()
-    )
+    # Pulizia e encoding label
+    le = LabelEncoder()
+    y_enc = le.fit_transform(y)
 
-# -------------------------------
-# Pipeline compatta
-# -------------------------------
-pipeline = Pipeline([
-    ("cleaner", FunctionTransformer(clean_texts)),
-    ("vectorizer", TfidfVectorizer()),
-    ("clf", MultinomialNB())
-])
+    # Costruzione pipeline
+    vectorizer_params = cfg["vectorizer"]["params"]
+    if "ngram_range" in vectorizer_params:   # Converte ngram_range in tupla per evitare errori
+        vectorizer_params["ngram_range"] = tuple(vectorizer_params["ngram_range"])
+    vectorizer = TfidfVectorizer(**vectorizer_params)
+    print(f"Vectorizer params: {vectorizer_params}")
+    
+    # modello
+    model_params = cfg["model"]["params"]
+    model = MultinomialNB(**model_params)
+    print(f"Model params: {model_params}")
 
-# -------------------------------
-# Parametri da ottimizzare con GridSearchCV
-# -------------------------------
-param_grid = {
-    "vectorizer__ngram_range": [(1,1), (1,2)],
-    "vectorizer__max_df": [0.9, 1.0],
-    "vectorizer__min_df": [1, 2],
-    "clf__alpha": [0.1, 0.5, 1.0]
-}
+    pipeline = Pipeline([
+        ("cleaner", FunctionTransformer(clean_texts)),
+        ("vectorizer", vectorizer),
+        ("clf", model)
+    ])
 
-grid = GridSearchCV(
-    pipeline,
-    param_grid,
-    cv=5,
-    scoring="accuracy",
-    n_jobs=-1,
-    verbose=1
-)
+    # Cross-validation
+    scorer = get_scorer(cfg["evaluation"]["metric"])
+    scores = cross_val_score(pipeline, X, y_enc, cv=cfg["evaluation"]["cv_folds"], scoring=scorer)
 
-# -------------------------------
-# Fit sul dataset
-# -------------------------------
-grid.fit(df["text"], y)
-pprint("✅ Migliori parametri:", grid.best_params_)
-pprint("✅ Miglior score (CV):", grid.best_score_)
+    mean_score = np.mean(scores)
+    print(f"{cfg['evaluation']['metric']} (CV mean): {mean_score:.4f}")
 
-best_model = grid.best_estimator_
-y_pred = best_model.predict(df["text"])
+    # Fit finale su tutto il dataset
+    pipeline.fit(X, y_enc)
 
-# -------------------------------
-# Classification Report
-# -------------------------------
-pprint("\nClassification Report:")
-pprint(classification_report(y, y_pred, target_names=le.classes_, digits=4))
+    # Salvataggio modello e encoder
+    output_dir = cfg["output"]["model_dir"]
+    save_pipeline_obj(pipeline, os.path.join(output_dir, cfg["output"]["model_filename"]))
+    save_pipeline_obj(le, os.path.join(output_dir, cfg["output"]["label_enc_filename"]))
 
-# -------------------------------
-# Confusion Matrix visuale
-# -------------------------------
-cm = confusion_matrix(y, y_pred)
-plt.figure(figsize=(6,5))
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-            xticklabels=le.classes_, yticklabels=le.classes_)
-plt.xlabel("Predicted")
-plt.ylabel("True")
-plt.title("Confusion Matrix - Multiclass Language Classification")
-plt.tight_layout()
-plt.show()
+    # Log dei risultati
+    results = {
+        "cv_scores": scores.tolist(),
+        "mean_score": mean_score,
+    }
+    log_experiment(results, cfg, cfg["output"]["results_file"])
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Train a text classification model")
+    parser.add_argument("--config", type=str, required=True, help="Path to YAML config file")
+    args = parser.parse_args()
+
+    main(args.config)

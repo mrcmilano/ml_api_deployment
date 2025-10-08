@@ -1,0 +1,46 @@
+{
+    "timestamp": "2025-10-08T19:31:25.453038",
+    "config": {
+        "experiment_name": "multinomial_nb_v2",
+        "dataset": {
+            "path": "data/lang_detection.csv",
+            "text_column": "Text",
+            "label_column": "Language"
+        },
+        "model": {
+            "type": "MultinomialNB",
+            "params": {
+                "alpha": 0.3,
+                "fit_prior": true
+            },
+            "random_seed": 42
+        },
+        "vectorizer": {
+            "type": "TfidfVectorizer",
+            "params": {
+                "max_df": 0.9,
+                "min_df": 2
+            }
+        },
+        "evaluation": {
+            "metric": "accuracy",
+            "cv_folds": 5
+        },
+        "output": {
+            "model_dir": "models/text/language_classification/v2",
+            "results_file": "results/train_multinb_v2.json",
+            "model_filename": "best_classifier.pkl",
+            "label_enc_filename": "label_encoder.pkl"
+        }
+    },
+    "results": {
+        "cv_scores": [
+            0.9825918762088974,
+            0.988394584139265,
+            0.9758103531688437,
+            0.9332365747460087,
+            0.9404934687953556
+        ],
+        "mean_score": 0.9641053714116741
+    }
+}

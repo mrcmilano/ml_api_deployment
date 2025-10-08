@@ -1,0 +1,36 @@
+experiment_name: "multinomial_nb_v2"
+dataset:
+  path: "data/lang_detection.csv"
+  text_column: "Text"
+  label_column: "Language"
+
+model:
+  type: "MultinomialNB"
+  params:
+    alpha: 0.3
+    fit_prior: true
+  random_seed: 42
+
+vectorizer:
+  type: "TfidfVectorizer"
+  params:
+    # ngram_range: (1, 2) temporaneamente commentato per evitare errori di parsing YAML
+    max_df: 0.9
+    min_df: 2
+
+evaluation:
+  metric: "accuracy"
+  # param_grid:
+  #   "vectorizer__ngram_range": [(1,1), (1,2)],
+  #   "vectorizer__max_df": [0.9, 1.0],
+  #   "vectorizer__min_df": [1, 2],
+  #   "clf__alpha": [0.1, 0.5, 1.0]
+  cv_folds: 5
+
+output:
+  model_dir: "models/text/language_classification/v2"
+  results_file: "results/train_multinb_v2.json"
+  model_filename: "best_classifier.pkl"
+  label_enc_filename: "label_encoder.pkl"
+
+  
