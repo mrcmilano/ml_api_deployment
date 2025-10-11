@@ -1,0 +1,120 @@
+{
+    "timestamp": "2025-10-11T14:32:26.822052",
+    "config": {
+        "experiment_name": "multinomial_nb_v2",
+        "dataset": {
+            "path": "data/lang_detection.csv",
+            "keep_languages": [
+                "English",
+                "Spanish",
+                "French",
+                "Italian"
+            ],
+            "text_column": "Text",
+            "label_column": "Language"
+        },
+        "model": {
+            "params": {
+                "alpha": 1.0
+            }
+        },
+        "vectorizer": {
+            "params": {
+                "ngram_range": [
+                    1,
+                    2
+                ],
+                "max_df": 0.95,
+                "min_df": 1
+            }
+        },
+        "grid_search": {
+            "enabled": true,
+            "cv_folds": 5,
+            "metric": "accuracy",
+            "n_jobs": 1,
+            "param_grid": {
+                "vectorizer__ngram_range": [
+                    [
+                        1,
+                        1
+                    ],
+                    [
+                        1,
+                        2
+                    ]
+                ],
+                "vectorizer__max_df": [
+                    0.9,
+                    0.95,
+                    1.0
+                ],
+                "vectorizer__min_df": [
+                    1,
+                    2
+                ],
+                "clf__alpha": [
+                    0.5,
+                    1.0,
+                    1.5
+                ]
+            }
+        },
+        "output": {
+            "model_dir": "models/text/language_classification/v2",
+            "results_file": "results/train_multinb_v2.json",
+            "model_filename": "best_classifier.pkl",
+            "label_enc_filename": "label_encoder.pkl"
+        }
+    },
+    "results": {
+        "cv_scores": [
+            0.9864629759949957,
+            0.982888289415383,
+            0.9828869862121093,
+            0.9826322099721116,
+            0.9864629759949957,
+            0.982888289415383,
+            0.9828869862121093,
+            0.9826322099721116,
+            0.9864629759949957,
+            0.982888289415383,
+            0.9828869862121093,
+            0.9826322099721116,
+            0.9818662522480256,
+            0.9770147522610577,
+            0.981610172804754,
+            0.9803336851982172,
+            0.9818662522480256,
+            0.9770147522610577,
+            0.981610172804754,
+            0.9803336851982172,
+            0.9818662522480256,
+            0.9770147522610577,
+            0.981610172804754,
+            0.9803336851982172,
+            0.9775249563426904,
+            0.9726728047540856,
+            0.9798228295149478,
+            0.9767589986186046,
+            0.9775249563426904,
+            0.9726728047540856,
+            0.9798228295149478,
+            0.9767589986186046,
+            0.9775249563426904,
+            0.9726728047540856,
+            0.9798228295149478,
+            0.9767589986186046
+        ],
+        "mean_score": 0.9802062427780819,
+        "best_estimator_params": {
+            "clf__alpha": 0.5,
+            "vectorizer__max_df": 0.9,
+            "vectorizer__min_df": 1,
+            "vectorizer__ngram_range": [
+                1,
+                1
+            ]
+        }
+    }
+}
