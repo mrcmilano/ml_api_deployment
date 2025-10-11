@@ -1,8 +1,7 @@
 import os
-import ast
-import json
 import numpy as np
 import pandas as pd
+from datetime import datetime
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder, FunctionTransformer
 from sklearn.pipeline import Pipeline
@@ -10,25 +9,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import classification_report
 from src.model_utils import (
-    load_config, clean_texts, save_pipeline_obj, log_experiment
-)
-
-
-def parse_config(config: dict) -> dict:
-    """Convert YAML-loaded strings like '(1, 2)' into tuples."""
-    def convert_value(v):
-        if isinstance(v, str) and v.startswith("(") and v.endswith(")"):
-            try:
-                return ast.literal_eval(v)
-            except Exception:
-                return v
-        if isinstance(v, list):
-            return [convert_value(x) for x in v]
-        if isinstance(v, dict):
-            return {k: convert_value(x) for k, x in v.items()}
-        return v
-
-    return convert_value(config)
+    load_config, parse_config, clean_texts,\
+    save_pipeline_obj, log_experiment,
+)     
 
 
 def prepare_data(cfg):
@@ -110,14 +93,21 @@ def main(config_path: str):
 
     save_pipeline_obj(pipeline, os.path.join(output_dir, cfg["output"]["model_filename"]))
     save_pipeline_obj(le, os.path.join(output_dir, cfg["output"]["label_enc_filename"]))
-    
+
     results = {
         "cv_scores": scores.tolist() if scores is not None else None,
         "mean_score": mean_score,
         "best_estimator_params": best_params
     }
 
-    log_experiment(results, cfg, cfg["output"]["results_file"])
+    # Costruisce il path con timestamp per il file dei risultati
+    results_file_with_ts = os.path.join(
+        os.path.dirname(cfg["output"]["results_file"]),
+        f"{os.path.splitext(os.path.basename(cfg['output']['results_file']))[0]}_" \
+        f"{datetime.now():%Y%m%d_%H%M%S}.json"
+    )
+
+    log_experiment(results, cfg, results_file_with_ts)
     print("Training complete and model saved.")
 
 

@@ -26,6 +26,7 @@ grid_search:
       - !!python/tuple [1, 1]
       - !!python/tuple [1, 2]
     vectorizer__max_df: [0.9, 0.95, 1.0]
+    vectorizer__min_df: [1, 2]
     clf__alpha: [0.5, 1.0, 1.5]
 
 output:
