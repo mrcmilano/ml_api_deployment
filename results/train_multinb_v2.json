@@ -1,5 +1,5 @@
 {
-    "timestamp": "2025-10-11T11:15:07.863659",
+    "timestamp": "2025-10-11T12:05:03.550187",
     "config": {
         "experiment_name": "multinomial_nb_v2",
         "dataset": {
@@ -84,6 +84,14 @@
             0.9775249563426904,
             0.9726728047540856
         ],
-        "mean_score": 0.9797383385027065
+        "mean_score": 0.9797383385027065,
+        "best_estimator_params": {
+            "clf__alpha": 0.5,
+            "vectorizer__max_df": 0.9,
+            "vectorizer__ngram_range": [
+                1,
+                1
+            ]
+        }
     }
 }

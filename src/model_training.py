@@ -1,5 +1,6 @@
 import os
 import ast
+import json
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
@@ -82,8 +83,9 @@ def train_model(cfg):
         pipeline = grid.best_estimator_
         scores = grid.cv_results_["mean_test_score"]
         mean_score = float(np.mean(scores))
+        best_params = grid.best_params_
 
-        print(f"Best params: {grid.best_params_}")
+        print(f"Best params: {best_params}")
         print(f"Mean CV score: {mean_score:.4f}")
 
         y_pred_enc = pipeline.predict(X)
@@ -96,23 +98,25 @@ def train_model(cfg):
         print("GridSearchCV disabled. Training default pipeline...")
         pipeline.fit(X, y_enc)
 
-    return pipeline, le, scores, mean_score
+    return pipeline, le, scores, mean_score, best_params
 
 
 def main(config_path: str):
     cfg = load_config(config_path)
-    pipeline, le, scores, mean_score = train_model(cfg)
+    pipeline, le, scores, mean_score, best_params = train_model(cfg)
 
     output_dir = cfg["output"]["model_dir"]
     os.makedirs(output_dir, exist_ok=True)
 
     save_pipeline_obj(pipeline, os.path.join(output_dir, cfg["output"]["model_filename"]))
     save_pipeline_obj(le, os.path.join(output_dir, cfg["output"]["label_enc_filename"]))
-
+    
     results = {
         "cv_scores": scores.tolist() if scores is not None else None,
         "mean_score": mean_score,
+        "best_estimator_params": best_params
     }
+
     log_experiment(results, cfg, cfg["output"]["results_file"])
     print("Training complete and model saved.")
 
