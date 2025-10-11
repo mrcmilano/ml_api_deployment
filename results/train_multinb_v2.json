@@ -1,30 +1,60 @@
 {
-    "timestamp": "2025-10-08T19:31:25.453038",
+    "timestamp": "2025-10-11T11:15:07.863659",
     "config": {
         "experiment_name": "multinomial_nb_v2",
         "dataset": {
             "path": "data/lang_detection.csv",
+            "keep_languages": [
+                "English",
+                "Spanish",
+                "French",
+                "Italian"
+            ],
             "text_column": "Text",
             "label_column": "Language"
         },
         "model": {
-            "type": "MultinomialNB",
             "params": {
-                "alpha": 0.3,
-                "fit_prior": true
-            },
-            "random_seed": 42
-        },
-        "vectorizer": {
-            "type": "TfidfVectorizer",
-            "params": {
-                "max_df": 0.9,
-                "min_df": 2
+                "alpha": 1.0
             }
         },
-        "evaluation": {
+        "vectorizer": {
+            "params": {
+                "ngram_range": [
+                    1,
+                    2
+                ],
+                "max_df": 0.95,
+                "min_df": 1
+            }
+        },
+        "grid_search": {
+            "enabled": true,
+            "cv_folds": 5,
             "metric": "accuracy",
-            "cv_folds": 5
+            "n_jobs": 1,
+            "param_grid": {
+                "vectorizer__ngram_range": [
+                    [
+                        1,
+                        1
+                    ],
+                    [
+                        1,
+                        2
+                    ]
+                ],
+                "vectorizer__max_df": [
+                    0.9,
+                    0.95,
+                    1.0
+                ],
+                "clf__alpha": [
+                    0.5,
+                    1.0,
+                    1.5
+                ]
+            }
         },
         "output": {
             "model_dir": "models/text/language_classification/v2",
@@ -35,12 +65,25 @@
     },
     "results": {
         "cv_scores": [
-            0.9825918762088974,
-            0.988394584139265,
-            0.9758103531688437,
-            0.9332365747460087,
-            0.9404934687953556
+            0.9864629759949957,
+            0.982888289415383,
+            0.9864629759949957,
+            0.982888289415383,
+            0.9864629759949957,
+            0.982888289415383,
+            0.9818662522480256,
+            0.9770147522610577,
+            0.9818662522480256,
+            0.9770147522610577,
+            0.9818662522480256,
+            0.9770147522610577,
+            0.9775249563426904,
+            0.9726728047540856,
+            0.9775249563426904,
+            0.9726728047540856,
+            0.9775249563426904,
+            0.9726728047540856
         ],
-        "mean_score": 0.9641053714116741
+        "mean_score": 0.9797383385027065
     }
 }

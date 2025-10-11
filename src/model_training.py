@@ -1,75 +1,125 @@
+import os
+import ast
+import numpy as np
 import pandas as pd
-from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import LabelEncoder, FunctionTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import get_scorer
-# from app.utils import clean_texts  # funzione di pulizia testo sta qui per essere caricata in produzione
-from src.model_utils import load_config, clean_texts, save_pipeline_obj, log_experiment
-from sklearn.preprocessing import FunctionTransformer
-import numpy as np
-import os
+from sklearn.metrics import classification_report
+from src.model_utils import (
+    load_config, clean_texts, save_pipeline_obj, log_experiment
+)
 
-def main(config_path: str):
-    # Carica configurazione
-    cfg = load_config(config_path)
-    print(f"Loaded configuration: {config_path}")
 
-    # Carica e prepara dataset di allenamento
-    print(f"Loading dataset from {cfg['dataset']['path']}")
+def parse_config(config: dict) -> dict:
+    """Convert YAML-loaded strings like '(1, 2)' into tuples."""
+    def convert_value(v):
+        if isinstance(v, str) and v.startswith("(") and v.endswith(")"):
+            try:
+                return ast.literal_eval(v)
+            except Exception:
+                return v
+        if isinstance(v, list):
+            return [convert_value(x) for x in v]
+        if isinstance(v, dict):
+            return {k: convert_value(x) for k, x in v.items()}
+        return v
+
+    return convert_value(config)
+
+
+def prepare_data(cfg):
     df = pd.read_csv(cfg["dataset"]["path"])
+    if "keep_languages" in cfg["dataset"]:
+        df = df[df[cfg["dataset"]["label_column"]].isin(cfg["dataset"]["keep_languages"])]
     X = df[cfg["dataset"]["text_column"]]
     y = df[cfg["dataset"]["label_column"]]
-
-    # Pulizia e encoding label
     le = LabelEncoder()
     y_enc = le.fit_transform(y)
+    return X, y, y_enc, le
 
-    # Costruzione pipeline
-    vectorizer_params = cfg["vectorizer"]["params"]
-    if "ngram_range" in vectorizer_params:   # Converte ngram_range in tupla per evitare errori
-        vectorizer_params["ngram_range"] = tuple(vectorizer_params["ngram_range"])
-    vectorizer = TfidfVectorizer(**vectorizer_params)
-    print(f"Vectorizer params: {vectorizer_params}")
-    
-    # modello
-    model_params = cfg["model"]["params"]
-    model = MultinomialNB(**model_params)
-    print(f"Model params: {model_params}")
 
-    pipeline = Pipeline([
+def build_pipeline(cfg):
+    vectorizer = TfidfVectorizer(**cfg["vectorizer"]["params"])
+    clf = MultinomialNB(**cfg["model"]["params"])
+    return Pipeline([
         ("cleaner", FunctionTransformer(clean_texts)),
         ("vectorizer", vectorizer),
-        ("clf", model)
+        ("clf", clf),
     ])
 
-    # Cross-validation
-    scorer = get_scorer(cfg["evaluation"]["metric"])
-    scores = cross_val_score(pipeline, X, y_enc, cv=cfg["evaluation"]["cv_folds"], scoring=scorer)
 
-    mean_score = np.mean(scores)
-    print(f"{cfg['evaluation']['metric']} (CV mean): {mean_score:.4f}")
+def train_model(cfg):
+    cfg = parse_config(cfg)
+    X, y, y_enc, le = prepare_data(cfg)
+    pipeline = build_pipeline(cfg)
 
-    # Fit finale su tutto il dataset
-    pipeline.fit(X, y_enc)
+    print("Pipeline configuration:")
+    for name, step in pipeline.steps:
+        print(f" - {name}: {step}")
 
-    # Salvataggio modello e encoder
+    scores, mean_score = None, None
+
+    if cfg["grid_search"]["enabled"]:
+        param_grid = cfg["grid_search"]["param_grid"]
+        if not param_grid:
+            raise ValueError("Grid search enabled but no param_grid provided")
+
+        param_grid = parse_config(param_grid)
+        print(f"Starting GridSearchCV with params:\n{param_grid}")
+
+        grid = GridSearchCV(
+            pipeline,
+            param_grid=param_grid,
+            cv=cfg["grid_search"]["cv_folds"],
+            scoring=cfg["grid_search"]["metric"],
+            verbose=2,
+            n_jobs=cfg["grid_search"].get("n_jobs", -1),
+        )
+        grid.fit(X, y_enc)
+        pipeline = grid.best_estimator_
+        scores = grid.cv_results_["mean_test_score"]
+        mean_score = float(np.mean(scores))
+
+        print(f"Best params: {grid.best_params_}")
+        print(f"Mean CV score: {mean_score:.4f}")
+
+        y_pred_enc = pipeline.predict(X)
+        y_pred = le.inverse_transform(y_pred_enc)
+        print("\nClassification Report:")
+        print(classification_report(y, y_pred, target_names=le.classes_, digits=4))
+
+
+    else:
+        print("GridSearchCV disabled. Training default pipeline...")
+        pipeline.fit(X, y_enc)
+
+    return pipeline, le, scores, mean_score
+
+
+def main(config_path: str):
+    cfg = load_config(config_path)
+    pipeline, le, scores, mean_score = train_model(cfg)
+
     output_dir = cfg["output"]["model_dir"]
+    os.makedirs(output_dir, exist_ok=True)
+
     save_pipeline_obj(pipeline, os.path.join(output_dir, cfg["output"]["model_filename"]))
     save_pipeline_obj(le, os.path.join(output_dir, cfg["output"]["label_enc_filename"]))
 
-    # Log dei risultati
     results = {
-        "cv_scores": scores.tolist(),
+        "cv_scores": scores.tolist() if scores is not None else None,
         "mean_score": mean_score,
     }
     log_experiment(results, cfg, cfg["output"]["results_file"])
+    print("Training complete and model saved.")
+
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Train a text classification model")
     parser.add_argument("--config", type=str, required=True, help="Path to YAML config file")
     args = parser.parse_args()
-
     main(args.config)

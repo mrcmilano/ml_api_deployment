@@ -19,7 +19,7 @@ venv/
 *.nbconvert.ipynb
 *.jupyter/
 
-# Data, Models, Notebooks
+# Data, Models, Notebooks, Results
 data/*
 !data/.gitkeep
 
@@ -28,6 +28,9 @@ models/*
 
 notebooks/*
 !notebooks/.gitkeep
+
+results/*
+!results/.gitkeep
 
 # Directories for archiving
 archived/

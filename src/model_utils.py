@@ -7,8 +7,8 @@ from datetime import datetime
 from joblib import dump
 
 def load_config(path: str) -> dict:
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.load(f, Loader=yaml.FullLoader)
 
 def save_json(data: dict, path: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
