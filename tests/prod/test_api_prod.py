@@ -5,12 +5,10 @@ from app.main import app
 client = TestClient(app)
 
 
-# --- MOCK FUNCTIONS ---
-def mock_predict_language_safe(texts):
-    return ["English" for _ in texts]
+# mock function to replace the actual model prediction
+def mock_predict_language_safe(pipeline, le, texts, **kwargs):
+    return ["English", "Italian"]
 
-
-# --- TESTS ---
 
 def test_status_endpoint():
     """Health check endpoint"""
@@ -28,7 +26,7 @@ def test_model_version_endpoint():
     assert isinstance(data["model_version"], str)
 
 
-@patch("app.utils.predict_language_safe", side_effect=mock_predict_language_safe)
+@patch("app.main.predict_language_safe", side_effect=mock_predict_language_safe)
 def test_language_detection(mock_func):
     """Language detection endpoint with mocked model"""
     payload = {"texts": ["Hello world!", "Ciao come state?"]}
@@ -38,5 +36,6 @@ def test_language_detection(mock_func):
     assert "predictions" in data
     assert isinstance(data["predictions"], list)
     assert "English" in data["predictions"]
-
-    # mock_func.assert_called_once() # controlla che la funzione mock sia stata chiamata 
+    assert "Italian" in data["predictions"]
+    
+    mock_func.assert_called_once() # controlla che la funzione mock sia stata chiamata 
