@@ -30,11 +30,25 @@ LABEL_ENCOD_FILENAME = "label_encoder.pkl"
 
 model_lock = threading.Lock()
 
+
+def load_artifacts():
+    """Carica modelli e altri artefatti necessari"""
+    if not os.path.exists(MODEL_DIR):
+        raise FileNotFoundError(f"Model directory {MODEL_DIR} does not exist.")
+    if not os.path.isfile(os.path.join(MODEL_DIR, MODEL_FILENAME)):
+        raise FileNotFoundError(f"Model file {MODEL_FILENAME} not found in {MODEL_DIR}.")
+    if not os.path.isfile(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME)):
+        raise FileNotFoundError(f"Label encoder file {LABEL_ENCOD_FILENAME} not found in {MODEL_DIR}.")
 # -------------------------------
 # Load model and encoder
 # -------------------------------
-model = joblib.load(os.path.join(MODEL_DIR, MODEL_FILENAME))
-le = joblib.load(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME))
+    model = joblib.load(os.path.join(MODEL_DIR, MODEL_FILENAME))
+    le = joblib.load(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME))
+    return model, le
+model, le = load_artifacts()
+# --- IGNORE ---
+# model = joblib.load(os.path.join(MODEL_DIR, MODEL_FILENAME))
+# le = joblib.load(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME))
 logger.info(f"Loaded model version {MODEL_VERSION} from {MODEL_DIR}")
 
 # -------------------------------
