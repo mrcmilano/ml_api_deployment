@@ -42,6 +42,9 @@ def load_artifacts():
         raise FileNotFoundError(f"Model file {MODEL_FILENAME} not found in {MODEL_DIR}.")
     if not os.path.isfile(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME)):
         raise FileNotFoundError(f"Label encoder file {LABEL_ENCOD_FILENAME} not found in {MODEL_DIR}.")
+    model = joblib.load(os.path.join(MODEL_DIR, MODEL_FILENAME))
+    le = joblib.load(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME))
+    return model, le
 # Load model and encoder on module import unless explicitly skipped
 model = None
 le = None
