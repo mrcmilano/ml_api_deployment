@@ -1,5 +1,10 @@
+import os
 import pytest
 from fastapi.testclient import TestClient
+
+# Skip heavy artifact loading during unit tests
+os.environ.setdefault("SKIP_MODEL_LOADING", "false")
+
 from app.main import app
 
 client = TestClient(app)

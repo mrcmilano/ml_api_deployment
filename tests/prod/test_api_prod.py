@@ -1,5 +1,10 @@
+import os
 from fastapi.testclient import TestClient
 from unittest.mock import patch
+
+# Skip heavy artifact loading during unit tests
+os.environ.setdefault("SKIP_MODEL_LOADING", "true")
+
 from app.main import app
 
 client = TestClient(app)

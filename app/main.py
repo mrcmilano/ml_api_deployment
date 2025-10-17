@@ -1,13 +1,15 @@
 import logging
+import os
+import threading
 import time
+from typing import List
+
+import joblib
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
-from typing import List
-import joblib
-import os
+
 # clean_texts usata da predict_language_safe nella pipeline
-from app.utils import predict_language_safe, clean_texts 
-import threading
+from app.utils import predict_language_safe, clean_texts
 
 # -------------------------------
 # Logging setup
@@ -27,6 +29,7 @@ MODEL_VERSION = "v1"
 MODEL_DIR = f"models/text/language_classification/{MODEL_VERSION}"
 MODEL_FILENAME = "best_classifier.pkl"
 LABEL_ENCOD_FILENAME = "label_encoder.pkl"
+SKIP_MODEL_LOADING = os.getenv("SKIP_MODEL_LOADING", "false").lower() in {"1", "true", "yes"}
 
 model_lock = threading.Lock()
 
@@ -39,17 +42,15 @@ def load_artifacts():
         raise FileNotFoundError(f"Model file {MODEL_FILENAME} not found in {MODEL_DIR}.")
     if not os.path.isfile(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME)):
         raise FileNotFoundError(f"Label encoder file {LABEL_ENCOD_FILENAME} not found in {MODEL_DIR}.")
-# -------------------------------
-# Load model and encoder
-# -------------------------------
-    model = joblib.load(os.path.join(MODEL_DIR, MODEL_FILENAME))
-    le = joblib.load(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME))
-    return model, le
-model, le = load_artifacts()
-# --- IGNORE ---
-# model = joblib.load(os.path.join(MODEL_DIR, MODEL_FILENAME))
-# le = joblib.load(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME))
-logger.info(f"Loaded model version {MODEL_VERSION} from {MODEL_DIR}")
+# Load model and encoder on module import unless explicitly skipped
+model = None
+le = None
+
+if SKIP_MODEL_LOADING:
+    logger.info("Skipping model load because SKIP_MODEL_LOADING is set.")
+else:
+    model, le = load_artifacts()
+    logger.info(f"Loaded model version {MODEL_VERSION} from {MODEL_DIR}")
 
 # -------------------------------
 # FastAPI setup
