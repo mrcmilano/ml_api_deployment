@@ -30,6 +30,7 @@ DEFAULT_MODEL_DIR = f"models/text/language_classification/{MODEL_VERSION}"
 MODEL_DIR = os.getenv("MODEL_DIR", DEFAULT_MODEL_DIR)
 MODEL_FILENAME = "best_classifier.pkl"
 LABEL_ENCOD_FILENAME = "label_encoder.pkl"
+SKIP_MODEL_LOADING = os.getenv("SKIP_MODEL_LOADING", "false").lower() in {"1", "true", "yes"}
 
 APP_ENV = os.getenv("APP_ENV", "dev").lower()
 SKIP_MODEL_LOADING = os.getenv("SKIP_MODEL_LOADING", "false").lower() in {"1", "true", "yes"}
