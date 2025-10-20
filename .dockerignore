@@ -6,7 +6,6 @@ venv/
 data/
 notebooks/
 scripts/
-src/
 *.ipynb
 *.env
 .DS_Store

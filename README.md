@@ -75,6 +75,44 @@ docker build -t language-api .
 docker run -d -p 8000:8000 language-api
 ```
 
+### 📦 Versionamento dei modelli
+
+L'API carica gli artefatti dal percorso `models/text/language_classification/<MODEL_VERSION>`.  
+Imposta `MODEL_VERSION` (o `MODEL_DIR`) come variabile d'ambiente per scegliere quale modello servire:
+
+```bash
+docker run -e MODEL_VERSION=v2 -p 8000:8000 language-api
+```
+
+Assicurati che la cartella corrispondente contenga `best_classifier.pkl` e `label_encoder.pkl`.
+
+### 🔁 Development con Docker
+
+Per iterare rapidamente senza rebuild continui, usa l'immagine di sviluppo e monta il codice locale:
+
+```bash
+docker build -f Dockerfile.dev -t language-api-dev .
+docker run --rm -it \
+  -v $(pwd)/app:/app/app \
+  -v $(pwd)/configs:/app/configs \
+  -v $(pwd)/src:/app/src \
+  -v $(pwd)/tests:/app/tests \
+  -p 8000:8000 \
+  language-api-dev
+```
+
+`uvicorn --reload` rileva automaticamente le modifiche nella directory montata. Imposta `-e MODEL_VERSION=vX` se vuoi testare un modello diverso.
+
+## 🧠 Training del modello
+
+Usa `src/model_training.py` per addestrare un nuovo classificatore partendo dalla configurazione YAML:
+
+```bash
+python src/model_training.py --config configs/model_config.yaml
+```
+
+Il training produce `best_classifier.pkl` e `label_encoder.pkl` nella cartella `output.model_dir` definita nel file di config, oltre a salvare un file di risultati con timestamp. Aggiorna `MODEL_VERSION` (o `MODEL_DIR`) per puntare al modello appena creato.
+
 ## 📡 Endpoint disponibili
 
 | Endpoint              | Metodo | Descrizione                         |
@@ -104,4 +142,4 @@ pytest -v
 ```
 
 ---
-☑️ **DISCLAIMER** : Vibe-coded with ChatGPT - v5 and v4.1
+☑️ **DISCLAIMER** : Vibe-coded with OpenAI ChatGPT - v5 and v4.1
