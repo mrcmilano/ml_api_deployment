@@ -25,27 +25,40 @@ logger = logging.getLogger("app")  # logger dell’applicazione
 # Config
 # -------------------------------
 CONFIDENCE_THRESHOLD = 0.5
-MODEL_VERSION = "v1"
-MODEL_DIR = f"models/text/language_classification/{MODEL_VERSION}"
+MODEL_VERSION = os.getenv("MODEL_VERSION", "v1")
+DEFAULT_MODEL_DIR = f"models/text/language_classification/{MODEL_VERSION}"
+MODEL_DIR = os.getenv("MODEL_DIR", DEFAULT_MODEL_DIR)
 MODEL_FILENAME = "best_classifier.pkl"
 LABEL_ENCOD_FILENAME = "label_encoder.pkl"
 SKIP_MODEL_LOADING = os.getenv("SKIP_MODEL_LOADING", "false").lower() in {"1", "true", "yes"}
 
+APP_ENV = os.getenv("APP_ENV", "dev").lower()
+SKIP_MODEL_LOADING = os.getenv("SKIP_MODEL_LOADING", "false").lower() in {"1", "true", "yes"}
+
 model_lock = threading.Lock()
 
-
 def load_artifacts():
-    """Carica modelli e altri artefatti necessari"""
-    if not os.path.exists(MODEL_DIR):
-        raise FileNotFoundError(f"Model directory {MODEL_DIR} does not exist.")
-    if not os.path.isfile(os.path.join(MODEL_DIR, MODEL_FILENAME)):
-        raise FileNotFoundError(f"Model file {MODEL_FILENAME} not found in {MODEL_DIR}.")
-    if not os.path.isfile(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME)):
-        raise FileNotFoundError(f"Label encoder file {LABEL_ENCOD_FILENAME} not found in {MODEL_DIR}.")
+    """Carica modelli e altri artefatti necessari."""
+    try:
+        if not os.path.exists(MODEL_DIR):
+            raise FileNotFoundError(f"Model directory {MODEL_DIR} does not exist.")
+        if not os.path.isfile(os.path.join(MODEL_DIR, MODEL_FILENAME)):
+            raise FileNotFoundError(f"Model file {MODEL_FILENAME} not found in {MODEL_DIR}.")
+        if not os.path.isfile(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME)):
+            raise FileNotFoundError(f"Label encoder file {LABEL_ENCOD_FILENAME} not found in {MODEL_DIR}.")
+    except FileNotFoundError as exc:
+        if APP_ENV == "prod":
+            logger.warning("Skipping model load in prod environment: %s", exc)
+            return None, None
+        raise
+
     model = joblib.load(os.path.join(MODEL_DIR, MODEL_FILENAME))
     le = joblib.load(os.path.join(MODEL_DIR, LABEL_ENCOD_FILENAME))
     return model, le
-# Load model and encoder on module import unless explicitly skipped
+
+# -------------------------------
+# Load model and encoder
+# -------------------------------
 model = None
 le = None
 
@@ -53,7 +66,10 @@ if SKIP_MODEL_LOADING:
     logger.info("Skipping model load because SKIP_MODEL_LOADING is set.")
 else:
     model, le = load_artifacts()
-    logger.info(f"Loaded model version {MODEL_VERSION} from {MODEL_DIR}")
+    if model is None or le is None:
+        logger.info("Model artifacts not loaded; predictions disabled for this run.")
+    else:
+        logger.info(f"Loaded model version {MODEL_VERSION} from {MODEL_DIR}")
 
 # -------------------------------
 # FastAPI setup

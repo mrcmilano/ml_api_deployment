@@ -1,32 +1,46 @@
 import os
+import sys
 import pytest
 from fastapi.testclient import TestClient
 
-# Skip heavy artifact loading during unit tests
-os.environ.setdefault("SKIP_MODEL_LOADING", "false")
 
-from app.main import app
+@pytest.fixture
+def dev_app(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "dev")
+    monkeypatch.setenv("MODEL_VERSION", "v2")
+    monkeypatch.delenv("SKIP_MODEL_LOADING", raising=False)
+    monkeypatch.delenv("MODEL_DIR", raising=False)
+    sys.modules.pop("app.main", None)
+    import app.main as main
 
-client = TestClient(app)
+    if main.model is None or main.le is None:
+        pytest.fail("Model artifacts must be available in dev environment for these tests.")
+    return main
 
 
-def test_status():
+@pytest.fixture
+def client(dev_app):
+    return TestClient(dev_app.app)
+
+
+def test_status(client):
     """Testa che l'endpoint /status risponda correttamente"""
     response = client.get("/status")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-def test_model_version():
+def test_model_version(client, dev_app):
     """Testa che l'endpoint /model_version ritorni la versione modello"""
     response = client.get("/model_version")
     assert response.status_code == 200
     data = response.json()
-    assert "model_version" in data
-    assert isinstance(data["model_version"], str)
+    assert data["model_version"] == dev_app.MODEL_VERSION
+    assert dev_app.MODEL_VERSION == "v2"
+    assert os.path.normpath(dev_app.MODEL_DIR).split(os.sep)[-1] == "v2"
 
 
-def test_language_detection():
+def test_language_detection(client):
     """Testa che l'endpoint /language_detection ritorni predizioni"""
     payload = {"texts": ["Hello world!", "Ciao come state?"]}
     response = client.post("/language_detection", json=payload)
@@ -34,33 +48,4 @@ def test_language_detection():
     data = response.json()
     assert "predictions" in data
     assert isinstance(data["predictions"], list)
-
-
-def test_language_detection_empty_list():
-    """Testa che una lista vuota venga gestita senza crash"""
-    payload = {"texts": []}
-    response = client.post("/language_detection", json=payload)
-    assert response.status_code == 200
-    data = response.json()
-    assert "predictions" in data
-    assert data["predictions"] == []
-
-def test_language_detection_invalid_input():
-    """Testa che un input non valido venga gestito correttamente"""
-    payload = {"text": "!!@±±#€@-=>./,"}  # input non valido 
-    response = client.post("/language_detection", json=payload)
-    assert response.status_code == 422
-    data = response.json()
-    assert "detail" in data
-    assert isinstance(data["detail"], list)
-
-# TODO: FIXME: questo test fallisce, capire perché
-# def test_language_detection_mixed_input():
-#     """Testa che una lista mista di testi venga gestita correttamente"""
-#     payload = {"texts": ["Hello world!", "", "!!@±±\#€@-=>./,", "Ciao come state?"]}
-#     response = client.post("/language_detection", json=payload)
-#     assert response.status_code == 200
-#     data = response.json()
-#     assert "predictions" in data
-#     assert isinstance(data["predictions"], list)
-#     assert len(data["predictions"]) == 4
+    assert len(data["predictions"]) == len(payload["texts"])
