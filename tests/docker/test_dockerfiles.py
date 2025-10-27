@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import re
 from pathlib import Path
+from typing import Iterator
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -8,7 +11,7 @@ def read_dockerfile(path: str) -> str:
     return (REPO_ROOT / path).read_text(encoding="utf-8")
 
 
-def extract_copy_sources(contents: str):
+def extract_copy_sources(contents: str) -> Iterator[str]:
     for line in contents.splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
@@ -20,24 +23,24 @@ def extract_copy_sources(contents: str):
                 yield src.rstrip("/")
 
 
-def test_production_dockerfile_sets_app_env():
+def test_production_dockerfile_sets_app_env() -> None:
     contents = read_dockerfile("Dockerfile")
     assert "ENV APP_ENV=prod" in contents
 
 
-def test_development_dockerfile_sets_app_env():
+def test_development_dockerfile_sets_app_env() -> None:
     contents = read_dockerfile("Dockerfile.dev")
     assert "ENV APP_ENV=dev" in contents
 
 
-def test_dockerfiles_define_model_version():
+def test_dockerfiles_define_model_version() -> None:
     prod = read_dockerfile("Dockerfile")
     dev = read_dockerfile("Dockerfile.dev")
     assert "ENV MODEL_VERSION=" in prod
     assert "ENV MODEL_VERSION=" in dev
 
 
-def test_production_copy_sources_exist():
+def test_production_copy_sources_exist() -> None:
     contents = read_dockerfile("Dockerfile")
     missing = [
         src for src in extract_copy_sources(contents)
@@ -46,7 +49,7 @@ def test_production_copy_sources_exist():
     assert not missing, f"Dockerfile COPY sources missing from repo: {missing}"
 
 
-def test_development_copy_sources_exist():
+def test_development_copy_sources_exist() -> None:
     contents = read_dockerfile("Dockerfile.dev")
     missing = [
         src for src in extract_copy_sources(contents)
@@ -55,13 +58,13 @@ def test_development_copy_sources_exist():
     assert not missing, f"Dockerfile.dev COPY sources missing from repo: {missing}"
 
 
-def test_requirements_cover_web_stack():
+def test_requirements_cover_web_stack() -> None:
     requirements = (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
     assert "fastapi" in requirements.lower()
     assert "uvicorn" in requirements.lower()
 
 
-def test_uvicorn_entrypoint_module_exists():
+def test_uvicorn_entrypoint_module_exists() -> None:
     contents = read_dockerfile("Dockerfile")
     cmd_line = next(
         (line for line in contents.splitlines() if line.strip().startswith("CMD")), ""
@@ -70,12 +73,12 @@ def test_uvicorn_entrypoint_module_exists():
     assert (REPO_ROOT / "app" / "main.py").exists()
 
 
-def test_models_directory_tracked_even_without_artifacts():
+def test_models_directory_tracked_even_without_artifacts() -> None:
     models_dir = REPO_ROOT / "models"
     assert models_dir.exists() and models_dir.is_dir()
 
 
-def test_dev_dockerfile_does_not_copy_app_code():
+def test_dev_dockerfile_does_not_copy_app_code() -> None:
     contents = read_dockerfile("Dockerfile.dev")
     copy_lines = [
         line for line in contents.splitlines() if line.strip().upper().startswith("COPY")
@@ -83,7 +86,7 @@ def test_dev_dockerfile_does_not_copy_app_code():
     assert all("app/" not in line.split() for line in copy_lines), "Dev Dockerfile should rely on bind mount for app/ code"
 
 
-def test_dockerignore_allows_app_and_src():
+def test_dockerignore_allows_app_and_src() -> None:
     dockerignore = (REPO_ROOT / ".dockerignore").read_text(encoding="utf-8").splitlines()
     assert "app/" not in dockerignore, "app/ must be included in build context"
     assert "src/" not in dockerignore, "src/ must be included in build context"
