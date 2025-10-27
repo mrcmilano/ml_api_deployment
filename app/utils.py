@@ -12,11 +12,17 @@ PUNCTUATION_TABLE = str.maketrans("", "", string.punctuation)
 
 
 def clean_texts(texts: Iterable[str]) -> list[str]:
-    """
-    Pulisce una lista di testi:
-    - lowercase
-    - rimozione punteggiatura
-    - rimozione spazi extra
+    """Normalizza testi rimuovendo punteggiatura ed eccessi di spazi.
+
+    Parameters
+    ----------
+    texts : Iterable[str]
+        Testi grezzi da processare.
+
+    Returns
+    -------
+    list[str]
+        Testi ripuliti in minuscolo e con la punteggiatura rimossa.
     """
     return [
         WHITESPACE_PATTERN.sub(" ", t.lower().translate(PUNCTUATION_TABLE)).strip()
@@ -39,9 +45,23 @@ def predict_language_safe(
     texts: Sequence[str],
     threshold: float = 0.5,
 ) -> list[str]:
-    """
-    Predice la lingua dei testi.
-    Se la probabilità massima è inferiore a threshold, restituisce 'unknown'.
+    """Genera predizioni sulla lingua di un testo gestendo i casi in cui la lingua non e' conosciuta.
+
+    Parameters
+    ----------
+    model : ProbabilisticTextClassifier
+        Classificatore con metodi `predict` e `predict_proba`.
+    le : LabelEncoder
+        Encoder per convertire caratteri in numeri.
+    texts : Sequence[str]
+        Testi su cui stimare la lingua.
+    threshold : float, optional
+        Probabilità minima accettata prima di etichettare come `unknown` un testo.
+
+    Returns
+    -------
+    list[str]
+        Predizioni di una lingua oppure `unknown` se sotto soglia di confidenza.
     """
     probas: NDArray[np.float_] = model.predict_proba(texts)
     max_probs: NDArray[np.float_] = probas.max(axis=1)

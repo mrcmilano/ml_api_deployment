@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import ast
 import json
 import os
@@ -7,7 +6,6 @@ import re
 import string
 from datetime import datetime
 from typing import Any, Iterable, MutableMapping
-
 import yaml
 from joblib import dump
 
@@ -21,7 +19,18 @@ def load_config(path: str) -> ConfigDict:
 
 
 def parse_config(config: ConfigDict) -> ConfigDict:
-    """Convert YAML-loaded strings like '(1, 2)' into tuples."""
+    """Convert YAML-loaded strings like ``\"(1, 2)\"`` into tuples.
+
+    Parameters
+    ----------
+    config : ConfigDict
+        Raw configuration dictionary loaded from YAML.
+
+    Returns
+    -------
+    ConfigDict
+        Configuration dictionary with literal string tuples parsed.
+    """
 
     def convert_value(value: Any) -> Any:
         if isinstance(value, str) and value.startswith("(") and value.endswith(")"):
@@ -50,8 +59,16 @@ def save_pipeline_obj(model: Any, path: str) -> None:
 
 
 def log_experiment(results: dict[str, Any], config: ConfigDict, output_file: str) -> None:
-    """
-    Unisce risultati e metadati di configurazione in un singolo file JSON
+    """Persists experiment results alongside configuration metadata.
+
+    Parameters
+    ----------
+    results : dict[str, Any]
+        Metrics and artefacts produced by a training run.
+    config : ConfigDict
+        Configuration data used to produce the results.
+    output_file : str
+        Destination path for the JSON log file.
     """
     log = {
         "timestamp": datetime.now().isoformat(),
@@ -63,11 +80,17 @@ def log_experiment(results: dict[str, Any], config: ConfigDict, output_file: str
 
 
 def clean_texts(texts: Iterable[str]) -> list[str]:
-    """
-    Pulisce una lista di testi:
-    - lowercase
-    - rimozione punteggiatura
-    - rimozione spazi extra
+    """Pulisce una lista di testi.
+
+    Parameters
+    ----------
+    texts : Iterable[str]
+        Testi da normalizzare.
+
+    Returns
+    -------
+    list[str]
+        Testi normalizzati (lowercase, senza punteggiatura, spazi unificati).
     """
     return [
         re.sub(r"\s+", " ", text.lower().translate(str.maketrans("", "", string.punctuation))).strip()

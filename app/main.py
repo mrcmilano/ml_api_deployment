@@ -25,7 +25,7 @@ logger = logging.getLogger("app")  # logger dell’applicazione
 # Config
 # -------------------------------
 CONFIDENCE_THRESHOLD: float = 0.5
-MODEL_VERSION = os.getenv("MODEL_VERSION", "v1")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "v2")
 DEFAULT_MODEL_DIR = Path("models") / "text" / "language_classification" / MODEL_VERSION
 MODEL_DIR = Path(os.getenv("MODEL_DIR", str(DEFAULT_MODEL_DIR)))
 MODEL_FILENAME = "best_classifier.pkl"
@@ -37,7 +37,13 @@ APP_ENV = os.getenv("APP_ENV", "dev").lower()
 model_lock = threading.Lock()
 
 def load_artifacts() -> tuple[Optional[ProbabilisticTextClassifier], Optional[LabelEncoder]]:
-    """Carica modelli e altri artefatti necessari."""
+    """Carica modelli e altri ogetti necessari per le predizioni.
+
+    Returns
+    -------
+    tuple[Optional[ProbabilisticTextClassifier], Optional[LabelEncoder]]
+        Tupla `(modello, label_encoder)` pronta per le predizioni; entrambi `None` se non sono disponibili.
+    """
     try:
         if not MODEL_DIR.exists():
             raise FileNotFoundError(f"Model directory {MODEL_DIR} does not exist.")
