@@ -1,11 +1,9 @@
 from __future__ import annotations
-
 import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Generator, Sequence
-from unittest.mock import patch
-
+from unittest.mock import Mock, patch
 import pytest
 from fastapi.testclient import TestClient
 
@@ -49,6 +47,8 @@ def test_model_version_endpoint(client: TestClient) -> None:
 def test_language_detection_with_mock(client: TestClient, prod_app: ModuleType) -> None:
     """Language detection endpoint with mocked model"""
     payload = {"texts": ["Hello world!", "Ciao come state?"]}
+    prod_app.model = Mock()
+    prod_app.le = Mock()
     with patch("app.main.predict_language_safe", side_effect=mock_predict_language_safe) as mock_func:
         response = client.post("/language_detection", json=payload)
     assert response.status_code == 200
@@ -59,6 +59,14 @@ def test_language_detection_with_mock(client: TestClient, prod_app: ModuleType) 
     mock_func.assert_called_once()
 
 
+def test_language_detection_without_artifacts_returns_503(client: TestClient) -> None:
+    """Prediction should fail fast when artifacts are unavailable."""
+    payload = {"texts": ["Hola"]}
+    response = client.post("/language_detection", json=payload)
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Model artifacts not loaded"
+
+
 def test_language_detection_rejects_empty_payload(client: TestClient) -> None:
     """Ensure payload without texts key is rejected by validation."""
     response = client.post("/language_detection", json={})
@@ -66,10 +74,12 @@ def test_language_detection_rejects_empty_payload(client: TestClient) -> None:
     assert response.json()["detail"][0]["loc"][-1] == "texts"
 
 
-def test_language_detection_returns_typed_structure(client: TestClient) -> None:
+def test_language_detection_returns_typed_structure(client: TestClient, prod_app: ModuleType) -> None:
     """Check shape of response when predictions succeed."""
-    payload = {"texts": ["Buongiorno", "Bonjour"]}
-    with patch("app.main.predict_language_safe", return_value=["it", "fr"]):
+    payload = {"texts": ["Buongiorno a tutti", "Bonjour a tous le monde"]}
+    prod_app.model = Mock()
+    prod_app.le = Mock()
+    with patch("app.main.predict_language_safe", return_value=["Italian", "French"]):
         response = client.post("/language_detection", json=payload)
     assert response.status_code == 200
     data = response.json()

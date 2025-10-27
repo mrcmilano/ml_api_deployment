@@ -1,17 +1,14 @@
 from __future__ import annotations
-
 import logging
 import os
 import threading
 import time
 from pathlib import Path
-from typing import Awaitable, Callable, Optional, cast
-
+from typing import Awaitable, Callable, Optional
 import joblib
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel
 from sklearn.preprocessing import LabelEncoder
-
 from app.utils import ProbabilisticTextClassifier, predict_language_safe
 
 # -------------------------------
@@ -109,6 +106,11 @@ async def log_requests(
 class TextsRequest(BaseModel):
     texts: list[str]
 
+
+class LanguageDetectionResponse(BaseModel):
+    predictions: list[str]
+    model_version: str
+
 # -------------------------------
 # Health check endpoint
 # -------------------------------
@@ -117,24 +119,23 @@ def status() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/language_detection")
-def detect_language(request: TextsRequest) -> dict[str, list[str] | str]:
+@app.post("/language_detection", response_model=LanguageDetectionResponse)
+def detect_language(request: TextsRequest) -> LanguageDetectionResponse:
     texts: list[str] = request.texts
     
     if not texts:  # controllo lista vuota
         logger.warning("Prediction request received with empty text list")
-        return {"predictions": [], "model_version": MODEL_VERSION}
+        return LanguageDetectionResponse(predictions=[], model_version=MODEL_VERSION)
+
+    if model is None or le is None:
+        logger.error("Prediction attempt without loaded model artifacts")
+        raise HTTPException(status_code=503, detail="Model artifacts not loaded")
 
     with model_lock:
-        predictions = predict_language_safe(
-            cast(ProbabilisticTextClassifier, model),
-            cast(LabelEncoder, le),
-            texts,
-            threshold=CONFIDENCE_THRESHOLD,
-        )
+        predictions = predict_language_safe(model, le, texts, threshold=CONFIDENCE_THRESHOLD)
         logger.info("Predictions made: model_version=%s, n_texts=%s", MODEL_VERSION, len(texts))
     
-    return {"predictions": predictions, "model_version": MODEL_VERSION}
+    return LanguageDetectionResponse(predictions=predictions, model_version=MODEL_VERSION)
 
 
 # -------------------------------
